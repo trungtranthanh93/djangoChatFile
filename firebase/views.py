@@ -1,57 +1,59 @@
-import pyrebase
+import datetime
+
+import firebase_admin
+from firebase_admin import credentials, firestore
 from django.http import HttpResponse, JsonResponse
 
-config = {
-    'apiKey': "AIzaSyDbY2FYw8w4YhCaGl9s-8EKqBK_J1B4XOc",
-    'authDomain': "djangoapp-8251e.firebaseapp.com",
-    'databaseURL': "https://djangoapp-8251e-default-rtdb.asia-southeast1.firebasedatabase.app",
-    'projectId': "djangoapp-8251e",
-    'storageBucket': "djangoapp-8251e.appspot.com",
-    'messagingSenderId': "381033511814",
-    'appId': "1:381033511814:web:353dc0cf764e8c0ac94a07",
-    'measurementId': "G-6830N40FKY"
-}
-firebase = pyrebase.initialize_app(config)
-auth = firebase.auth()
-database = firebase.database()
-storage = firebase.storage()
-user = auth.sign_in_with_email_and_password('test1@ttt.com', '123456')
-token = auth.create_custom_token("abc123")
-user = auth.refresh(user['refreshToken'])
-userIdToken = user['idToken']
+cred = credentials.Certificate("./serviceAccountKey.json")
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://fir-project-trungtt.firebaseio.com'
+})
+
+db = firestore.client()
+
 # Create your views here.
 def index(request):
-    data = {
-        'id': database.child('data').child('id').get().val(),
-        'name': database.child('data').child('name').get().val(),
-        'projectName': database.child('data').child('projectname').get().val()
-    }
+    data = db.collection(u'cities').get()
     return JsonResponse(data)
 
-#create data with unique, auto-generated, timestamp-based key
+
+# create data with unique, auto-generated, timestamp-based key
 def push(request):
     data = {
-        'name': 'Trung',
-        'id': '1'
+        u'name': u'Los Angeles',
+        u'state': u'CA',
+        u'country': u'USA'
     }
-    database.child("users").push(data,userIdToken)
+
+    # Add a new doc in collection 'cities' with ID 'LA'
+    db.collection(u'cities').document(u'LA').set(data)
     return HttpResponse("success")
-#create data with own keys
+
+# create data with own keys
 def set(request):
     data = {
-        'name': 'Trung',
-        'id': '2'
+        u'stringExample': u'Hello, World!',
+        u'booleanExample': True,
+        u'numberExample': 3.14159265,
+        u'dateExample': datetime.datetime.now(),
+        u'arrayExample': [5, True, u'hello'],
+        u'nullExample': None,
+        u'objectExample': {
+            u'a': 5,
+            u'b': True
+        }
     }
-    database.child("users").child("own keys").set(data)
+    db.collection(u'data').document(u'one').set(data)
     return HttpResponse("success")
 
-#update data wit own keys
+
+# update data wit own keys
 def update(request):
-    database.child("users").child("own keys").update({"name":'Trung1'})
+    db.child("users").child("own keys").update({"name": 'Trung1'})
     return HttpResponse("success")
 
 
-#multi-location updates
+# multi-location updates
 def updateMutilLocation(request):
     data = {
         "users/Trung/": {
@@ -61,23 +63,24 @@ def updateMutilLocation(request):
             "name": "Tran update v1"
         }
     }
-    database.update(data)
+    db.update(data)
     return HttpResponse("success")
 
 
 def updateMutilLocationWithGenerateKey(request):
     data = {
-        "users/" + database.generate_key(): {
+        "users/" + db.generate_key(): {
             "name": "Trung v2 GenerateKey"
         },
-        "users/" + database.generate_key(): {
+        "users/" + db.generate_key(): {
             "name": "Trung v2 GenerateKey"
         }
     }
-    database.update(data)
+    db.update(data)
     return HttpResponse("success")
 
-#upload image
+
+# upload image
 def uploadImage(request):
-    storage.child("image1").put("C:/Users/trung/Downloads/2.jpg", userIdToken)
+    # storage.child("image1").put("C:/Users/trung/Downloads/2.jpg")
     return HttpResponse("success")
